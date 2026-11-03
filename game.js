@@ -71,6 +71,7 @@ function start(lv) {
 function finishRace() {
   state = 'over'; input.blur(); sfx.finish();
   const st = L.stats(G), rank = L.rankOf(G, 0);
+  if (!tut && window.arcadeRun) arcadeRun({ level, bad: rank >= 3 });            // 연패 구제(로비): 3등 이하면 나쁜 판
   const newBest = level === 'normal' && !tut && G.runners[0].finishT !== null && st.cpm > best;
   if (newBest) { best = st.cpm; store.set('typeraceBest', String(best)); setTimeout(sfx.best, 500); }
   const rows = L.rankOrder(G).map((r, i) => `<div class="row${r.me ? ' me' : ''}"><span>${i + 1}</span><span>${r.icon} ${r.name}</span><span>${r.finishT !== null ? r.finishT.toFixed(1) + '초' : '못 들어옴'}</span></div>`).join('');
