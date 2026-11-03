@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>타자 레이스</title>
+<style>
+  *, *::before, *::after { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  * { margin:0; padding:0; }
+  html, body { width:100%; height:100%; background:#101a2e; color:#fff; overflow:hidden;
+    font-family:-apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+  #app { position:relative; width:100%; max-width:520px; height:100%; margin:0 auto; display:flex; flex-direction:column; padding:8px 12px 12px; gap:10px; }
+  #top { display:flex; align-items:center; gap:10px; height:36px; flex:none; }
+  #top .t { font-size:20px; font-weight:900; letter-spacing:.02em; color:#7be0ff; flex:1; }
+  #top .s { font-size:13px; font-weight:700; color:#cfe3f5; }
+  #top .s b { font-size:17px; color:#fff; }
+  #top button { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); color:#fff; width:34px; height:34px; border-radius:8px; font-size:15px; cursor:pointer; }
+  #lanes { flex:none; min-height:176px; display:flex; flex-direction:column; gap:5px; }
+  .lane { position:relative; height:30px; border-radius:8px; background:rgba(255,255,255,.07); overflow:hidden; }
+  .lane.me { background:rgba(123,224,255,.18); box-shadow:inset 0 0 0 1.5px rgba(123,224,255,.6); }
+  .lane .fill { position:absolute; left:0; top:0; bottom:0; background:rgba(123,224,255,.14); width:0; }
+  .lane .ic { position:absolute; top:2px; font-size:22px; line-height:26px; transition:left .08s linear; }
+  .lane .nm { position:absolute; right:8px; top:0; line-height:30px; font-size:11px; font-weight:800; color:#b8cbe0; }
+  .lane .flag { position:absolute; right:0; top:0; bottom:0; width:6px; background:repeating-linear-gradient(0deg,#fff 0 5px,#111 5px 10px); }
+  #passage { flex:none; background:#16233d; border-radius:14px; padding:16px 16px; font-size:21px; line-height:1.75; word-break:keep-all; min-height:128px; border:2px solid #243a60; }
+  .c { color:#7f90a8; }
+  .c.ok { color:#6fe38b; }
+  .c.bad { background:#ff5a5a; color:#fff; border-radius:3px; }
+  .c.pend { color:#ffd23a; }
+  .c.cur { color:#fff; border-bottom:3px solid #ffd23a; }
+  .c.sp { white-space:pre-wrap; }
+  #typing { flex:none; width:100%; font-size:20px; padding:14px 14px; border-radius:12px; border:2px solid #3a5a8a; background:#0c1424; color:#fff; outline:none; font-family:inherit; }
+  #typing:focus { border-color:#7be0ff; }
+  #typing.bad { border-color:#ff5a5a; background:#2a1018; }
+  #hint { flex:none; font-size:12px; color:#8fa4be; text-align:center; min-height:16px; }
+  #count { position:absolute; left:0; right:0; top:30%; text-align:center; font-size:110px; font-weight:900; color:#ffd23a; text-shadow:0 4px 0 #8a5a00; pointer-events:none; z-index:4; }
+  #count.hidden { display:none; }
+  #overlay { position:fixed; inset:0; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:16px; background:rgba(8,12,24,.9); }
+  #overlay.hidden { display:none; }
+  #overlay h1 { font-size:42px; font-weight:900; color:#7be0ff; text-shadow:0 3px 0 #0a4a6a; }
+  #overlay h2 { font-size:28px; font-weight:900; }
+  #overlay p { font-size:14px; color:#e6e6e6; line-height:1.6; }
+  #overlay .big { font-size:20px; font-weight:800; color:#7be0ff; }
+  #overlay .help { font-size:12px; color:#bdbdbd; line-height:1.7; }
+  #overlay .note { font-size:11px; color:#9ab; }
+  #overlay button { margin-top:6px; background:linear-gradient(180deg,#d6f4ff,#4cc3ff); color:#06243a; font-weight:900; font-size:17px; border:none; border-radius:999px; padding:12px 34px; box-shadow:0 4px 0 #1a6a9a; cursor:pointer; }
+  #overlay button:active { transform:translateY(3px); box-shadow:0 1px 0 #1a6a9a; }
+  #overlay .lv { display:flex; gap:10px; margin-top:6px; }
+  #overlay .lv button { margin-top:0; padding:10px 18px; font-size:16px; }
+  #overlay .lv small { display:block; font-size:10px; font-weight:600; opacity:.75; margin-top:2px; }
+  #overlay .rank { width:230px; display:flex; flex-direction:column; gap:3px; }
+  #overlay .row { display:flex; gap:10px; font-size:14px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,.08); }
+  #overlay .row span:nth-child(2) { flex:1; text-align:left; }
+  #overlay .row.me { background:rgba(76,195,255,.4); font-weight:800; }
+  #overlay .stats { display:flex; gap:14px; justify-content:center; font-size:12px; color:#cfe3f5; }
+  #overlay .stats b { display:block; font-size:20px; color:#fff; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top"><span class="t">타자 레이스</span><span class="s"><b id="cpm">0</b> 글자/분</span><button id="muteBtn" title="소리 (M)">🔊</button></div>
+  <div id="lanes"></div>
+  <div id="passage"></div>
+  <input id="typing" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="여기에 위 글을 따라 입력하세요">
+  <div id="hint"></div>
+  <div id="count" class="hidden"></div>
+</div>
+<div id="overlay"></div>
+<script src="logic.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
